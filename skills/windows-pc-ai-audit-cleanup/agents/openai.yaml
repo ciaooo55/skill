@@ -1,0 +1,7 @@
+interface:
+  display_name: "Universal Windows PC & AI Organizer"
+  short_description: "Interactive audit, cleanup, DevEnv & AI MCP/Skill governance for any Windows PC"
+  default_prompt: "Use $windows-pc-ai-audit-cleanup to audit this Windows PC, its dev environments, and its AI/MCP/Skills setup, then walk me through cleanup and organization choices step by step."
+
+policy:
+  allow_implicit_invocation: true
