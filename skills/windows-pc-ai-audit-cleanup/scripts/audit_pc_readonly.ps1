@@ -8,6 +8,8 @@ Never mutates any file, service, or registry key; never prints raw secret values
 #>
 [CmdletBinding()]
 param(
+    [ValidateSet('Full','AiOnly','DiskOnly')]
+    [string]$Mode = 'Full',
     [int]$TopFolders = 12,
     [int]$MaxFilesPerDir = 80000
 )
@@ -90,8 +92,10 @@ function Get-TopSubdirs([string]$Root, [int]$TopN = 8, [int]$FileCap = 50000, [s
 }
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+Write-Host ("Audit Mode: {0} | IsAdmin: {1} | PowerShell: {2}" -f $Mode, $isAdmin, $PSVersionTable.PSVersion)
 
-Write-Host "================ 1. OS, HARDWARE, PHYSICAL DISKS & VOLUMES ================"
+if ($Mode -ne 'AiOnly') {
+Write-Host "`n================ 1. OS, HARDWARE, PHYSICAL DISKS & VOLUMES ================"
 $os = Get-CimInstance Win32_OperatingSystem
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
 $cs = Get-CimInstance Win32_ComputerSystem
@@ -172,7 +176,9 @@ foreach ($extra in @(
         Write-Host ("  {0,-50} : {1}" -f $extra, (Get-FastDirSizeMB $extra 40000))
     }
 }
+} # end if Mode -ne AiOnly
 
+if ($Mode -eq 'Full') {
 Write-Host "`n================ 4. DEV TOOLCHAINS, ENV VARS & PATH CHECK ================"
 $devVars = @('RUSTUP_HOME','CARGO_HOME','GOPATH','GOMODCACHE','GOCACHE','PNPM_HOME','npm_config_cache','YARN_CACHE_FOLDER','BUN_INSTALL_CACHE_DIR','ELECTRON_CACHE','PIP_CACHE_DIR','UV_CACHE_DIR','POETRY_CACHE_DIR','CONDA_PKGS_DIRS','HF_HOME','TORCH_HOME','OLLAMA_MODELS','GRADLE_USER_HOME','NUGET_PACKAGES','ANDROID_HOME','ANDROID_SDK_ROOT','PUB_CACHE','PLAYWRIGHT_BROWSERS_PATH','SE_CACHE_PATH')
 foreach ($k in $devVars) {
@@ -196,7 +202,9 @@ foreach ($p in $uPath) {
     elseif (-not (Test-Path $p)) { Write-Host "  [MISSING]   $p" }
     $seen[$norm] = $true
 }
+} # end if Mode -eq Full
 
+if ($Mode -ne 'DiskOnly') {
 Write-Host "`n================ 5. AI SOFTWARE, MCP CONFIGS & SKILLS DISCOVERY ================"
 $aiRegex = 't3|codex|antigravity|agy|deepseek|dsh|claude|gemini|cursor|trae|windsurf|zed|opencode|kiro|cherry|chatbox|lm.?studio|ollama|anythingllm|comfyui|typeless|roxy|keysmith|cockpit|qoder|codebuddy|aider'
 $uninst = @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*')
@@ -251,7 +259,9 @@ foreach ($sr in $skillCandidates) {
         foreach ($b in $broken) { Write-Host ("    [BROKEN] {0} -> {1}" -f $b.Name, ($b.Target -join ',')) }
     }
 }
+} # end if Mode -ne DiskOnly
 
+if ($Mode -ne 'AiOnly') {
 Write-Host "`n================ 6. ZOMBIE SERVICES, AUTOSTART & TOP RAM ================"
 Write-Host "Potential Zombie Auto/Manual Services (missing binary on disk):"
 Get-CimInstance Win32_Service | Where-Object { $_.PathName -and $_.PathName -notmatch 'svchost\.exe' } | ForEach-Object {
@@ -276,8 +286,10 @@ foreach ($rk in @('HKCU:\Software\Microsoft\Windows\CurrentVersion\Run','HKLM:\S
 
 Write-Host "`nTop 8 RAM Processes:"
 Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -First 8 Name,@{N='MB';E={[math]::Round($_.WorkingSet64/1MB,0)}} | Format-Table -AutoSize
+} # end if Mode -ne AiOnly
 
 Write-Host "`n================ 7. PORTABLE/DEEP APPS, DUPLICATES & UNKNOWNS ================"
+if ($Mode -ne 'AiOnly') {
 Write-Host "Running Processes Outside Windows / Program Files (unregistered/portable candidates):"
 Get-CimInstance Win32_Process | Where-Object {
     $_.ExecutablePath -and
@@ -319,6 +331,7 @@ foreach ($vol in (Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3")) {
         Write-Host ("  [{0}] ({1} top-level folders): {2}" -f $vol.DeviceID, $dirs.Count, (($dirs | Select-Object -First 30 -ExpandProperty Name) -join ', '))
     }
 }
+} # end if Mode -ne AiOnly (processes/links/drives)
 
 Write-Host "`nCompeting / Duplicate Commands in PATH (same command in >1 distinct folder):"
 foreach ($c in @('rustc','cargo','go','node','npm','pnpm','yarn','bun','python','pip','uv','conda','java','mvn','gradle','dotnet','git','gh','codex','claude','gemini','cursor','code','ollama','docker','t3')) {
@@ -329,6 +342,7 @@ foreach ($c in @('rustc','cargo','go','node','npm','pnpm','yarn','bun','python',
     }
 }
 
+if ($Mode -ne 'AiOnly') {
 Write-Host "`nDuplicate Uninstall Entries (excluding normal side-by-side Windows/VC++/.NET runtimes):"
 $runtimeSkipRe = '^(microsoft visual c\+\+|microsoft \.net|microsoft windows desktop runtime|microsoft asp\.net|universal crt|office \d+ click-to-run|windows software development kit|vs_)'
 $allUninst = @(Get-ItemProperty $uninst | Where-Object { $_.DisplayName -and $_.DisplayName -notmatch $runtimeSkipRe })
@@ -340,6 +354,7 @@ if ($dups) {
 } else {
     Write-Host "  (none)"
 }
+} # end if Mode -ne AiOnly (dup uninstall)
 
 Write-Host "`nUnclassified Home Dot-Directories (inspect before touching - may be unknown AI/dev tools):"
 $knownDotRe = '^\.((agents|anaconda|android|antigravity|aws|azure|bashrc|bun|cache|claude|codex|conda|config|cursor|docker|dotnet|dsh|gemini|gitconfig|gnupg|gradle|ipython|java|jupyter|keras|kube|lmstudio|local|m2|mitmproxy|npm|nuget|ollama|opencode|pip|pnpm|poetry|profile|pyenv|rustup|cargo|ssh|t3|trae|uv|vscode|windsurf|yarn|zshrc).*)$'

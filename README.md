@@ -10,7 +10,7 @@
 
 | # | Skill 名称 | 简介与适用场景 | 入口文档 |
 |---|---|---|---|
-| 1 | [`windows-pc-ai-audit-cleanup`](./skills/windows-pc-ai-audit-cleanup/) | **通用 Windows 电脑体检、清理、开发环境与 AI/MCP/Skills 治理**。适用于任意 Windows 10/11 电脑（单盘/多盘、SSD/HDD、台式/笔记本），支持深层绿色软件发现、重复环境三分法去重、陌生软件零瞎猜安全确认、MCP 独立隔离、跨端 Skills 统一与重启后真实环境验收。 | [SKILL.md](./skills/windows-pc-ai-audit-cleanup/SKILL.md) |
+| 1 | [`windows-pc-ai-audit-cleanup`](./skills/windows-pc-ai-audit-cleanup/) | **通用 Windows 电脑整理 & AI（MCP / Skills）单套共用治理**。支持**整套清理**，也支持**单独只整理 MCP 工具和 Skills**（只留一套本体，通过目录联接或复制同步让本机全部 AI 软件共用，并支持多台电脑复用，不写死任何路径）。 | [SKILL.md](./skills/windows-pc-ai-audit-cleanup/SKILL.md) |
 | 2 | *（后续扩展占位）* | 新增 Skill 直接放入 `skills/<new-skill-name>/SKILL.md` 并在本表补充说明即可，一键安装脚本会自动识别。 | — |
 
 ---
@@ -19,20 +19,16 @@
 
 ### 1. [`windows-pc-ai-audit-cleanup`](./skills/windows-pc-ai-audit-cleanup/SKILL.md)
 
-**做什么的**：一套完整、强健、安全的交互式 Windows 电脑深度体检与整理工作流，解决「C 盘爆红、环境乱、依赖乱、AI/MCP/Skills 乱、软件装得深且重复」等问题。
+**做什么的**：一套灵活、强健、安全的通用 Windows 整理与 AI 治理工作流，**不死板、不写死盘符或路径**，既能**单独使用**也能**整套使用**：
+- **模式一（单独使用：只整理 MCP + Skills）**：跳过系统清理，专攻把散落各处的 MCP 工具和 Skills 收拢成**唯一一套本体**，按用户自选位置与方式（目录联接“快捷方式”或纯实体复制）同步给电脑上所有已装的 AI 软件共用，也方便多台电脑拉取复用。
+- **模式二（整套使用：全机体检 + 清理 + 环境 + AI）**：覆盖 C 盘瘦身、僵尸服务/注册表/搜索索引/虚拟内存/电源与 Wi-Fi、多语言开发环境与本地 AI 模型权重、深层绿色软件与重复项三分法治理、未知软件零瞎猜确认、重启后真实环境验收。
+- **模式三（其它按需单项）**：只救 C 盘空间 / 只理开发环境 / 只清 T3↔Codex↔AGY 离线对话残留。
 
 **核心特性**：
-- **7 条安全铁律**：先只读体检后动手；绝不私自改动 Defender/防火墙/虚拟化/浏览器登录态/聊天记录；绝不打印原始密钥与 Token；绝不在线修改运行中的 SQLite/缓存；绝不凭猜测删除陌生软件或私有隔离运行时。
-- **6 阶段门禁流程**：
-  1. `Phase 0` 只读深度扫描（自动识别单/多盘、SSD/HDD、Top 空间大户、开机报错、开发工具链、全部 AI 客户端/MCP/Skills、深层快捷方式与便携进程、重复项与未归类点目录）；
-  2. `Phase 1` 交互式选型对话（逐项确认清理范围、不碰红线、DevEnv 放哪里、要不要软链接、AI MCP 放哪里与按客户端接入、Skills 放哪里、重复/陌生项目取舍）；
-  3. `Phase 2` Windows 系统/磁盘/服务/注册表/搜索索引/虚拟内存/电源与 Wi-Fi 调优；
-  4. `Phase 3` 多语言开发环境与本地 AI 模型权重整理（Rust/Go/Node/pnpm/Python/Conda/Java/.NET/Android/Flutter/Ollama/HuggingFace）；
-  5. `Phase 4` AI 软件盘点、MCP 独立隔离与冒烟测试、跨端 Skills 统一治理、可选 T3 Code↔Codex↔AGY 离线对话残留清理；
-  6. `Phase 5` 重启后真实环境变量验收。
+- **7 条安全铁律**：先只读体检后动手；绝不私自改动 Defender/防火墙/虚拟化/浏览器登录态/聊天记录；绝不打印原始密钥与 Token；绝不在线修改运行中的 SQLite/缓存；创建任何链接前先用大白话说明利弊由用户选择；绝不凭猜测删除陌生软件或私有隔离运行时。
 - **内置可复用资源**：
   - 分阶段手册：[`references/`](./skills/windows-pc-ai-audit-cleanup/references/)（共 5 份，按需渐进加载，不浪费上下文）
-  - 只读高速体检脚本：[`scripts/audit_pc_readonly.ps1`](./skills/windows-pc-ai-audit-cleanup/scripts/audit_pc_readonly.ps1)（兼容 Windows PowerShell 5.1 与 PowerShell 7，内置 C# 高速统计与单目录超时保护，防卡死）
+  - 只读高速体检脚本：[`scripts/audit_pc_readonly.ps1`](./skills/windows-pc-ai-audit-cleanup/scripts/audit_pc_readonly.ps1)（兼容 Windows PowerShell 5.1 与 PowerShell 7，支持 `-Mode Full | AiOnly | DiskOnly` 按需快扫，防卡死）
   - 可选离线清理脚本：[`scripts/cleanup_t3_orphans.py`](./skills/windows-pc-ai-audit-cleanup/scripts/cleanup_t3_orphans.py)（默认 `--dry-run`，带进程锁与 SQLite 完整性校验；未装 T3 Code 自动跳过）
 
 ---

@@ -3,11 +3,11 @@
 Run Phase 0 (`audit_pc_readonly.ps1`) **first** so every question adapts to the actual drives, folders, dev tools, and AI clients discovered on this specific PC. Keep questions concise, plain-spoken, and grouped into 1–2 short rounds with a clear `(Recommended)` default for each.
 
 ## 1. Scope & Workflow Mode
-Let the user pick the depth of work:
-- **Mode A — Read-Only Checkup Report First (Recommended on unfamiliar PCs)**: Produce a numbered `.md` report (Issue → Fix → Risk/Impact) and change nothing until the user selects items by number.
-- **Mode B — Full PC + DevEnv + AI Organization**: Clean system/disk/services, organize dev toolchains & model caches, and govern AI clients/MCPs/Skills end-to-end.
-- **Mode C — DevEnv & AI Ecosystem Only**: Leave Windows OS settings alone; only untangle dev toolchains, PATH, AI clients, MCP servers, and Skills.
-- **Mode D — System Drive (`C:`) Space Rescue**: Strictly focus on safe disk space recovery (caches, installers, old OS/driver caches, optional offloading).
+Adapt to what the user requested—never force a full PC overhaul if they only want one module:
+- **Mode A — Standalone AI MCP & Skills Organizer (Fast, Zero OS Changes)**: Skip OS/disk/DevEnv cleanup completely. Consolidate MCP servers and Agent Skills into **one clean shared copy** usable by all installed AI clients (and portable across PCs).
+- **Mode B — Full PC + DevEnv + AI Suite**: Complete checkup, system/disk/service cleanup, DevEnv & model cache consolidation, and AI/MCP/Skills governance end-to-end.
+- **Mode C — Read-Only Checkup Report First (Recommended on unfamiliar PCs)**: Produce a numbered `.md` report (Issue → Fix → Risk/Impact) and change nothing until the user selects items by number.
+- **Mode D — Focused Single-Domain Pass**: Pick only one—System Drive (`C:`) Space Rescue, DevEnv & PATH Deduplication, or Offline AI Chat Database Cleanup.
 
 ## 2. Hard Redlines ("Do Not Touch" Confirmation)
 Explicitly confirm sensitive areas discovered in Phase 0 before touching anything:
@@ -32,25 +32,24 @@ Adapt automatically to what Phase 0 found:
 - **Fragile Coupled Environments**:
   - If Phase 0 finds Node/Python/Git living inside an existing Conda/virtual env on `C:`, explain that moving it directly breaks hardcoded Windows `.exe` shims. Recommend keeping the existing env in place while pointing future envs & package caches (`.condarc`, `PIP_CACHE_DIR`, `UV_CACHE_DIR`) to the target drive.
 
-## 4. AI MCP Server Placement & Wiring (Only Ask If User Uses MCPs)
-Let the user decide how to organize MCP servers across whatever AI clients exist on this PC:
-1. **Where to Store MCP Servers**:
-   - **Unified Standalone Hub (Recommended for >=2 MCPs)**: A single user-chosen root (e.g., `<ChosenDrive>:\AI-MCP\` or `<ChosenDrive>:\Tools\mcp\`) with one self-contained folder per MCP (`mcp/<name>/`), plus dedicated `runtimes/`, `config/`, `data/` folders. Easy to back up, inspect, and move across machines.
-   - **Client-Managed / Native Only**: Leave MCP configs inside each client's default folder (simpler if only using 1–2 remote/npx MCPs).
-2. **Dependency Isolation**:
-   - **Isolated `.venv` / local `node_modules` per MCP (Recommended)**: Prevents upgrading system Python/Node from breaking MCP servers.
-3. **Selective Client Wiring**:
-   - List the AI clients actually installed on this PC (e.g. Claude Desktop, Claude Code, Cursor, Windsurf, VS Code/Cline, Codex, AGY, DeepSeek Harness, Cherry Studio) and ask **which clients should connect to which MCPs**. Never inject an MCP into every client unasked.
+## 4. AI MCP Server Placement & Single-Copy Sharing
+Let the user decide flexibly—never hardcode a fixed drive or folder name:
+1. **Where to Keep the Single Master MCP Hub**:
+   - **Unified Standalone Folder (Recommended for >=2 MCPs or multi-client sharing)**: User chooses ANY convenient location (e.g., a folder on a data drive, inside a workspace root, or in user home). Inside it, keep **one self-contained folder per MCP** (`mcp/<server-name>/`) with its own isolated `.venv` / `node_modules` / runtime so upgrading one never breaks another.
+   - **Keep In-Place / Client-Managed**: Leave existing MCPs where they are if only 1–2 lightweight remote/npx servers exist.
+2. **One Copy Shared Across Chosen Clients**:
+   - List every MCP-capable AI client actually discovered on this PC (e.g. Codex, AGY, T3 Code, Claude Code, Claude Desktop, Cursor, Windsurf, VS Code/Cline/Roo, DeepSeek Harness, Cherry Studio, or any newly discovered client).
+   - Ask **which clients should connect to which MCPs**. Every selected client's config points to that **exact same single MCP entrypoint**—zero duplicate MCP copies! Never silently inject MCPs into clients the user didn't pick.
 
-## 5. AI Skills Placement & Cross-Client Sync (Only Ask If User Uses Agent Skills)
-Show the skill directories discovered in Phase 0 and offer clear choices:
-- **Option 1 — Single Source of Truth + Junctions (Recommended)**:
-  - Pick one canonical folder (default: `%USERPROFILE%\.agents\skills\`, or a user-chosen folder on a data drive).
-  - Clients that natively read `~/.agents/skills/` or support custom skill directories read directly.
-  - Other installed clients (e.g. `~/.claude/skills/`, `~/.gemini/config/skills/`, `~/.cursor/skills/`) link selectively via Windows directory junctions (`mklink /J`) — edit once, zero duplicate copies, zero version drift.
-- **Option 2 — Independent Per-Client Skills**:
-  - Keep separate copies per client (choose only when the user intentionally wants different skill versions for different models).
-- Always ask permission before deleting any non-empty custom skill; always clean dangling/broken links.
+## 5. AI Skills Placement & Cross-Client / Multi-PC Sharing
+Show all skill folders discovered in Phase 0 and explain the two sharing options **in plain everyday language** before creating any link:
+- **Option 1 — Single Master Copy + Folder Link / Junction (Recommended)**:
+  - Plain-language explanation for the user: *"只在你选的一个主目录（甚至直接放进你的 Git 仓库里）存 1 份真实文件；其它 AI 软件通过类似‘文件夹快捷方式’的目录联接指向这 1 份。改一次全部 AI 软件自动同步最新版、不占双份空间，换一台电脑拉下来也能一键连上所有 AI 软件。"*
+  - Works on Windows via Directory Junction (`mklink /J` / `New-Item -ItemType Junction`, **no Admin needed**) and macOS/Linux via `ln -s`.
+- **Option 2 — Independent Real Folders / Copy-Sync (If User Dislikes Links)**:
+  - Keep normal entity folders in each client's global skill directory with zero symlinks/junctions; optionally provide a simple sync/copy script when updating from a master folder.
+- **Master Folder Choice**: Let the user pick ANY path (e.g., `~/.agents/skills/`, a Git repo like `<UserChosenPath>\skill\skills\`, or a data-drive folder). Never force a hardcoded path.
+- Always ask permission before deleting any non-empty custom skill; always offer to clean dangling/broken links.
 
 ## 6. Cleanup Aggressiveness & Optional Software/OS Choices
 Present concrete findings from Phase 0 grouped into **4 tiers** (with estimated MB/GB saved):
